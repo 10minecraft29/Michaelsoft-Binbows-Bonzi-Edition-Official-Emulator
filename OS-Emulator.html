@@ -1,570 +1,160 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Michaelsoft Binbows — Bonzi Edition (Text OS)</title>
+<meta charset="UTF-8">
+<title>Michaelsoft Binbows Bonzi Edition</title>
 <style>
-  :root{
-    --bg: #0e0519;
-    --bg-2:#1a0b2e;
-    --fg: #e8d7ff;
-    --muted:#bda7e6;
-    --accent:#a35bff;
-    --accent-2:#6e2bff;
-    --good:#77ffcc;
-    --warn:#ffd96a;
-    --bad:#ff7b9c;
-    --glass: rgba(163,91,255,0.12);
-    --shadow: 0 10px 30px rgba(163,91,255,0.15), inset 0 0 0 1px rgba(255,255,255,0.03);
-    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  body {
+    background-color: #2E004F; /* Dark purple */
+    color: #FF80FF; /* Light magenta text */
+    font-family: monospace;
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 10px;
   }
-  html,body{height:100%}
-  body{
-    margin:0;
-    background:
-      radial-gradient(1000px 600px at 10% -20%, rgba(174,112,255,0.25), transparent 60%),
-      radial-gradient(800px 500px at 90% 120%, rgba(110,43,255,0.25), transparent 60%),
-      linear-gradient(180deg, var(--bg), #0a0311 60%, var(--bg));
-    color:var(--fg);
-    font-family:var(--mono);
-    letter-spacing: .2px;
-    overflow:hidden;
+  #terminal {
+    flex: 1;
+    overflow-y: auto;
   }
-  .frame{
-    position:fixed; inset:0; padding:18px;
-    display:grid; grid-template-rows:auto 1fr auto; gap:12px;
+  #input {
+    width: 100%;
+    border: none;
+    outline: none;
+    background: #2E004F;
+    color: #FF80FF;
+    font-family: monospace;
+    font-size: 16px;
   }
-  .titlebar{
-    display:flex; align-items:center; gap:10px;
-    background:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
-    border-radius:16px; padding:10px 14px; box-shadow:var(--shadow);
-    backdrop-filter: blur(12px);
+  .line {
+    margin: 0;
   }
-  .dot{width:12px;height:12px;border-radius:50%}
-  .dot.red{background:#ff6b6b}
-  .dot.yellow{background:#ffd96a}
-  .dot.green{background:#77ffcc}
-  .title{
-    margin-left:6px; font-weight:700; color:#f1e6ff;
-    text-shadow:0 0 12px rgba(163,91,255,.4);
+  #gameContainer {
+    position: relative;
+    width: 200px;
+    height: 100px;
+    background: #4B006F;
+    margin-top: 5px;
   }
-
-  .screen{
-    position:relative;
-    background: radial-gradient(200% 140% at 50% 0%, rgba(163,91,255,0.08), rgba(163,91,255,0.03) 40%, transparent 60%) , var(--bg-2);
-    border-radius:18px; box-shadow:var(--shadow);
-    padding:16px; overflow:auto;
+  #player {
+    position: absolute;
+    bottom: 0;
+    width: 20px;
+    height: 20px;
+    background: #FF80FF;
   }
-
-  .terminal{
-    font-size:14px; line-height:1.6; white-space:pre-wrap; word-break:break-word;
-    height:100%; width:100%;
-  }
-  .row{display:block}
-  .prompt{
-    color:var(--muted);
-  }
-  .caret{
-    display:inline-block; width:8px; height:1.2em; vertical-align:-0.2em;
-    background:var(--accent); box-shadow:0 0 6px var(--accent);
-    animation:blink 1s steps(1,end) infinite;
-  }
-  @keyframes blink { 50%{ opacity:0 } }
-
-  .inputline{
-    display:inline; outline:none; border:none; background:transparent; color:var(--fg);
-    caret-color:transparent; /* we draw our own caret */
-  }
-
-  .statusbar{
-    display:flex; gap:12px; align-items:center; justify-content:space-between;
-    color:var(--muted);
-    padding:8px 12px; border-radius:14px;
-    background:linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
-    box-shadow:var(--shadow); backdrop-filter: blur(12px);
-    font-size:12px;
-  }
-  .pill{
-    background:var(--glass); padding:6px 10px; border-radius:999px; box-shadow:inset 0 0 0 1px rgba(163,91,255,0.25);
-  }
-  .ok{ color:var(--good) }
-  .warn{ color:var(--warn) }
-  .bad{ color:var(--bad) }
-  .accent{ color:var(--accent) }
-
-  .hint{ color:var(--muted) }
-
-  /* Scrollbar */
-  .screen::-webkit-scrollbar{width:10px}
-  .screen::-webkit-scrollbar-thumb{background:rgba(163,91,255,0.28); border-radius:12px}
-  .screen::-webkit-scrollbar-track{background:transparent}
-
-  /* Mobile */
-  @media (max-width:700px){
-    .terminal{ font-size:13px }
+  .obstacle {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background: #FF0000;
   }
 </style>
 </head>
 <body>
-  <div class="frame">
-    <div class="titlebar">
-      <div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div>
-      <div class="title">Michaelsoft Binbows — Bonzi Edition · Text OS</div>
-      <div style="margin-left:auto" class="pill">Theme: <span class="accent">Purple</span></div>
-    </div>
-    <div class="screen">
-      <div id="term" class="terminal" aria-live="polite" role="log"></div>
-    </div>
-    <div class="statusbar">
-      <div class="pill">User: <span class="accent" id="who">guest</span></div>
-      <div class="pill">Storage: <span id="stor">0</span> keys</div>
-      <div class="pill">Clock: <span id="clock"></span></div>
-      <div class="pill ok" id="net">Offline-ready</div>
-    </div>
-  </div>
+<div id="terminal"></div>
+<input id="input" autofocus placeholder="Type a command..." />
 
 <script>
-(() => {
-  const $ = sel => document.querySelector(sel);
-  const term = $('#term');
-  const who = $('#who');
-  const stor = $('#stor');
-  const clock = $('#clock');
+const terminal = document.getElementById('terminal');
+const input = document.getElementById('input');
 
-  const state = {
-    user: localStorage.getItem('mb_user') || 'guest',
-    cwd: '~',
-    files: JSON.parse(localStorage.getItem('mb_files') || '{}'),
-    notes: JSON.parse(localStorage.getItem('mb_notes') || '[]'),
-    todos: JSON.parse(localStorage.getItem('mb_todos') || '[]'),
-    booted: false,
-  };
+const commands = {
+  help: "Commands: help, clear, play, about, time",
+  clear: () => { terminal.innerHTML = ''; return ''; },
+  about: "Michaelsoft Binbows Bonzi Edition – Browser OS Simulator!",
+  time: () => new Date().toLocaleTimeString(),
+  play: startGame
+};
 
-  who.textContent = state.user;
-  stor.textContent = Object.keys(localStorage).length;
+function printLine(text) {
+  const line = document.createElement('div');
+  line.className = 'line';
+  line.textContent = text;
+  terminal.appendChild(line);
+  terminal.scrollTop = terminal.scrollHeight;
+}
 
-  // Clock
-  setInterval(() => {
-    const d = new Date();
-    clock.textContent = d.toLocaleString();
-  }, 1000);
-
-  const save = () => {
-    localStorage.setItem('mb_user', state.user);
-    localStorage.setItem('mb_files', JSON.stringify(state.files));
-    localStorage.setItem('mb_notes', JSON.stringify(state.notes));
-    localStorage.setItem('mb_todos', JSON.stringify(state.todos));
-    stor.textContent = Object.keys(localStorage).length;
-  };
-
-  const type = async (el, text = "", ms = 6) => {
-    for (let ch of text) {
-      el.textContent += ch;
-      await new Promise(r => setTimeout(r, ms));
-      // Keep scrolled to bottom
-      term.parentElement.scrollTop = term.parentElement.scrollHeight;
+input.addEventListener('keydown', e => {
+  if(e.key === 'Enter') {
+    const cmd = input.value.trim().toLowerCase();
+    printLine("> " + cmd);
+    input.value = '';
+    if(cmd in commands) {
+      const result = typeof commands[cmd] === 'function' ? commands[cmd]() : commands[cmd];
+      if(result) printLine(result);
+    } else {
+      printLine("Unknown command: " + cmd);
     }
-  };
+  }
+});
 
-  const writeLine = (html = "") => {
-    const row = document.createElement('div');
-    row.className = 'row';
-    row.innerHTML = html;
-    term.appendChild(row);
-    term.parentElement.scrollTop = term.parentElement.scrollHeight;
-    return row;
-  };
+// ---- Mini Dodger Game ----
+function startGame() {
+  printLine("Starting Dodger Game! Use left/right arrows to move '@'.");
+  const gameContainer = document.createElement('div');
+  gameContainer.id = 'gameContainer';
+  terminal.appendChild(gameContainer);
 
-  const promptLine = () => {
-    const row = document.createElement('div');
-    row.className = 'row';
-    const prompt = document.createElement('span');
-    prompt.className = 'prompt';
-    prompt.textContent = `${state.user}@binbows:${state.cwd}$ `;
-    const input = document.createElement('span');
-    input.className = 'inputline';
-    input.setAttribute('role','textbox');
-    input.setAttribute('aria-label','Command input');
-    const caret = document.createElement('span');
-    caret.className = 'caret';
-    row.appendChild(prompt);
-    row.appendChild(input);
-    row.appendChild(caret);
-    term.appendChild(row);
-    focusInput(input);
-  };
+  let playerPos = 90;
+  const player = document.createElement('div');
+  player.id = 'player';
+  player.style.left = playerPos + 'px';
+  gameContainer.appendChild(player);
 
-  const focusInput = (input) => {
-    const sel = window.getSelection();
-    const range = document.createRange();
-    range.setStart(input, input.childNodes.length);
-    range.collapse(true);
-    sel.removeAllRanges(); sel.addRange(range);
-    term.parentElement.scrollTop = term.parentElement.scrollHeight;
-  };
+  let obstacles = [];
+  let score = 0;
+  let gameOver = false;
 
-  const banner = async () => {
-    const art = [
-"      __  __ _       _         _               _         ",
-"     |  \\/  (_)_ __ (_) ___   | |__   ___  ___| | _____  ",
-"     | |\\/| | | '_ \\| |/ _ \\  | '_ \\ / _ \\/ __| |/ / _ \\ ",
-"     | |  | | | | | | | (_) | | |_) |  __/ (__|   <  __/ ",
-"     |_|  |_|_|_| |_|_|\\___/  |_.__/ \\___|\\___|_|\\_\\___| ",
-"   Michaelsoft Binbows — Bonzi Edition · v1.0 (text mode)"
-    ].join("\n");
+  function createObstacle() {
+    const obs = document.createElement('div');
+    obs.className = 'obstacle';
+    obs.style.top = '0px';
+    obs.style.left = Math.floor(Math.random() * 10) * 20 + 'px';
+    gameContainer.appendChild(obs);
+    obstacles.push(obs);
+  }
 
-    const box = [
-      "Type 'help' to get started. Pro tip: use TAB to autocomplete commands.",
-      "Data saves automatically to localStorage (no internet required)."
-    ];
-
-    const b = writeLine();
-    await type(b, art + "\n");
-    writeLine(`<span class="hint">${box[0]}</span>`);
-    writeLine(`<span class="hint">${box[1]}</span>`);
-    writeLine();
-  };
-
-  const commands = {
-    help(args){
-      const list = [
-        ["help","Show this help."],
-        ["about","About Bonzi Edition."],
-        ["whoami","Show current user."],
-        ["login &lt;name&gt;","Change user."],
-        ["time","Show the current time."],
-        ["echo &lt;text&gt;","Print text."],
-        ["clear","Clear the screen."],
-        ["reboot","Soft reboot the terminal."],
-        ["theme [purple|dark|light]","Switch theme."],
-        ["bonzi","Show majestic ASCII Bonzi."],
-        ["motd [set &lt;text&gt;|clear]","View or set the message of the day."],
-        ["notes [add|list|del &lt;i&gt;]","Simple notes."],
-        ["todo [add|list|done &lt;i&gt;|del &lt;i&gt;]","Checklist manager."],
-        ["calc &lt;expr&gt;","Evaluate math (e.g. 2*(3+4))."],
-        ["files","List saved files."],
-        ["open &lt;name&gt;","Open a file."],
-        ["save &lt;name&gt; &lt;content...&gt;","Save a file."],
-        ["edit &lt;name&gt;","Interactive text editor."],
-        ["rm &lt;name&gt;","Delete a file."],
-        ["apps","List mini apps."],
-        ["matrix [on|off]","Toggle falling text screensaver."],
-        ["history","Show recent commands."]
-      ];
-      const max = Math.max(...list.map(([k])=>k.length));
-      list.forEach(([k,v])=>{
-        writeLine(`<span class="accent">${k.padEnd(max,' ')}</span>  ${v}`);
-      });
-    },
-    about(){
-      writeLine("Michaelsoft Binbows — Bonzi Edition (Text OS)");
-      writeLine("Because sometimes all you need is a purple terminal and good vibes.");
-      writeLine("Made for the browser · stores data locally · zero tracking.");
-    },
-    whoami(){ writeLine(state.user); },
-    login(args){
-      const name = (args[0]||"").replace(/[^\w\-\.]/g,'').slice(0,18) || 'guest';
-      state.user = name; who.textContent = name; save();
-      writeLine(`Logged in as ${name}.`);
-    },
-    time(){ writeLine(new Date().toString()); },
-    echo(args){ writeLine(args.join(' ')); },
-    clear(){ term.innerHTML=''; },
-    reboot(){ term.innerHTML=''; boot(true); },
-    theme(args){
-      const t = (args[0]||'purple').toLowerCase();
-      if(t==='purple'){ document.documentElement.style.setProperty('--bg','#0e0519'); writeLine("Theme set to Purple."); }
-      else if(t==='dark'){ document.documentElement.style.setProperty('--bg','#0a0a0a'); writeLine("Theme set to Dark."); }
-      else if(t==='light'){ document.documentElement.style.setProperty('--bg','#130b2a'); writeLine("Light-ish, but still purple."); }
-      else writeLine("Unknown theme. Try: purple | dark | light");
-    },
-    bonzi(){
-      const art = [
-"              __",
-"          .-\"`  `\"-.",
-"         /  .--.    \\",
-"        /  /    \\    \\",
-"       |  |  ()  |   |   Bonzi waves hello.",
-"        \\  \\____/   /    Stay purple, stay curious.",
-"         '._    _.-'",
-"            `\"\"`"
-      ].join("\n");
-      writeLine(art);
-    },
-    motd(args){
-      let msg = localStorage.getItem('mb_motd') || '';
-      if(!args.length){ writeLine(msg?`MOTD: ${msg}`:"No MOTD set."); return; }
-      if(args[0]==='set'){ msg = args.slice(1).join(' '); localStorage.setItem('mb_motd', msg); writeLine("MOTD updated."); }
-      else if(args[0]==='clear'){ localStorage.removeItem('mb_motd'); writeLine("MOTD cleared."); }
-      else writeLine("Usage: motd [set <text>|clear]");
-    },
-    notes(args){
-      if(!args.length || args[0]==='list'){
-        if(!state.notes.length){ writeLine("No notes yet. Use: notes add <text>"); return; }
-        state.notes.forEach((n,i)=>writeLine(`${i+1}. ${n}`));
-      } else if(args[0]==='add'){
-        const text = args.slice(1).join(' ');
-        if(!text){ writeLine("Usage: notes add <text>"); return; }
-        state.notes.push(text); save(); writeLine("Note added.");
-      } else if(args[0]==='del'){
-        const i = (+args[1]|0)-1;
-        if(i>=0 && i<state.notes.length){ state.notes.splice(i,1); save(); writeLine("Note deleted."); }
-        else writeLine("Invalid index.");
-      } else writeLine("Usage: notes [add|list|del <i>]");
-    },
-    todo(args){
-      if(!args.length || args[0]==='list'){
-        if(!state.todos.length){ writeLine("No todos. Use: todo add <text>"); return; }
-        state.todos.forEach((t,i)=>writeLine(`${i+1}. [${t.done?'x':' '}] ${t.text}`));
-      } else if(args[0]==='add'){
-        const text = args.slice(1).join(' ');
-        if(!text){ writeLine("Usage: todo add <text>"); return; }
-        state.todos.push({text, done:false}); save(); writeLine("Todo added.");
-      } else if(args[0]==='done'){
-        const i = (+args[1]|0)-1;
-        if(i>=0 && i<state.todos.length){ state.todos[i].done=true; save(); writeLine("Nice. Marked done."); }
-        else writeLine("Invalid index.");
-      } else if(args[0]==='del'){
-        const i = (+args[1]|0)-1;
-        if(i>=0 && i<state.todos.length){ state.todos.splice(i,1); save(); writeLine("Deleted."); }
-        else writeLine("Invalid index.");
-      } else writeLine("Usage: todo [add|list|done <i>|del <i>]");
-    },
-    calc(args){
-      const expr = args.join(' ');
-      if(!expr) return writeLine("Usage: calc <expression>");
-      try{
-        // very small safe evaluator
-        if(!/^[\d+\-*/().\s%^]+$/.test(expr)) throw new Error("Unsafe expression");
-        // support ^ as exponent
-        const js = expr.replace(/\^/g,'**');
-        /* eslint no-new-func: "off" */
-        const out = Function(`"use strict"; return (${js});`)();
-        writeLine(String(out));
-      }catch(e){ writeLine("Error: " + e.message); }
-    },
-    files(){
-      const names = Object.keys(state.files);
-      if(!names.length) return writeLine("No files saved. Use: save <name> <content>");
-      names.forEach(n => writeLine("- " + n));
-    },
-    open(args){
-      const n = args[0]; if(!n) return writeLine("Usage: open <name>");
-      if(!(n in state.files)) return writeLine("No such file.");
-      writeLine(`--- ${n} ---\n${state.files[n]}\n--- end ---`);
-    },
-    save(args){
-      const n = args[0]; if(!n) return writeLine("Usage: save <name> <content>");
-      const content = args.slice(1).join(' ');
-      state.files[n] = content; save(); writeLine(`Saved ${n} (${content.length} chars).`);
-    },
-    rm(args){
-      const n = args[0]; if(!n) return writeLine("Usage: rm <name>");
-      if(n in state.files){ delete state.files[n]; save(); writeLine(`Removed ${n}.`); }
-      else writeLine("No such file.");
-    },
-    edit(args){
-      const n = args[0]; if(!n) return writeLine("Usage: edit <name>");
-      let buff = state.files[n] || "";
-      writeLine(`Editing ${n}. Press ESC on empty line to save & exit.`);
-      const editor = document.createElement('textarea');
-      editor.value = buff;
-      Object.assign(editor.style,{
-        width:'100%', height:'200px', background:'rgba(163,91,255,0.07)', color:'var(--fg)',
-        border:'1px solid rgba(163,91,255,0.35)', borderRadius:'12px', padding:'10px',
-        fontFamily:'var(--mono)', fontSize:'14px', outline:'none', boxShadow:'inset 0 0 8px rgba(163,91,255,0.15)'
-      });
-      const row = writeLine(); row.appendChild(editor); editor.focus();
-      const esc = (ev)=>{
-        if(ev.key==='Escape'){
-          state.files[n] = editor.value; save();
-          writeLine(`Saved ${n} (${editor.value.length} chars).`);
-          editor.removeEventListener('keydown', esc);
-          row.remove();
-        }
-      };
-      editor.addEventListener('keydown', esc);
-    },
-    apps(){
-      writeLine("Mini apps:");
-      writeLine("- notes : take quick notes");
-      writeLine("- todo  : checklist manager");
-      writeLine("- matrix: falling text screensaver");
-      writeLine("- edit   : inline text editor");
-      writeLine("Run 'help' for usage.");
-    },
-    matrix(args){
-      const action = (args[0]||'on').toLowerCase();
-      if(action==='off'){ stopMatrix(); writeLine("Matrix off."); }
-      else { startMatrix(); writeLine("Matrix on. Use: matrix off"); }
-    },
-    history(){
-      const h = JSON.parse(localStorage.getItem('mb_hist')||'[]');
-      if(!h.length) return writeLine("No history yet.");
-      h.slice(-50).forEach((c,i)=>writeLine(`${i+1}. ${c}`));
-    }
-  };
-
-  // Matrix "screensaver"
-  let matrixTimer = null, matrixCanvas = null, ctx = null, matrixCols = [], matrixChars = "ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ0123456789◆◇●○■□★☆#+=*%^";
-  const startMatrix = () => {
-    if(matrixTimer) return;
-    matrixCanvas = document.createElement('canvas');
-    matrixCanvas.width = term.clientWidth;
-    matrixCanvas.height = term.clientHeight;
-    matrixCanvas.style.position='absolute';
-    matrixCanvas.style.inset='16px';
-    matrixCanvas.style.borderRadius='14px';
-    matrixCanvas.style.pointerEvents='none';
-    matrixCanvas.style.mixBlendMode='screen';
-    term.parentElement.appendChild(matrixCanvas);
-    ctx = matrixCanvas.getContext('2d');
-    const fontSize = 16;
-    const cols = Math.floor(matrixCanvas.width / fontSize);
-    matrixCols = new Array(cols).fill(0);
-    matrixTimer = setInterval(()=>{
-      ctx.fillStyle = "rgba(20,10,40,0.25)";
-      ctx.fillRect(0,0,matrixCanvas.width, matrixCanvas.height);
-      ctx.fillStyle = "rgba(163,91,255,0.9)";
-      ctx.font = fontSize + "px monospace";
-      matrixCols.forEach((y, i)=>{
-        const text = matrixChars[Math.floor(Math.random()*matrixChars.length)];
-        const x = i * fontSize;
-        ctx.fillText(text, x, y);
-        if (y > matrixCanvas.height + Math.random()*200) matrixCols[i]=0;
-        else matrixCols[i] = y + fontSize;
-      });
-    }, 50);
-    window.addEventListener('resize', syncMatrixSize);
-  };
-  const stopMatrix = () => {
-    if(matrixTimer){
-      clearInterval(matrixTimer); matrixTimer=null;
-      window.removeEventListener('resize', syncMatrixSize);
-      matrixCanvas.remove(); matrixCanvas=null;
-    }
-  };
-  const syncMatrixSize = () => {
-    if(!matrixCanvas) return;
-    matrixCanvas.width = term.clientWidth;
-    matrixCanvas.height = term.clientHeight;
-  };
-
-  // Input handling + history
-  let currentInput = "";
-  let history = JSON.parse(localStorage.getItem('mb_hist')||'[]');
-  let hIndex = history.length;
-
-  const commitHistory = (cmd) => {
-    history.push(cmd);
-    history = history.slice(-200);
-    localStorage.setItem('mb_hist', JSON.stringify(history));
-    hIndex = history.length;
-  };
-
-  const runCommand = (line) => {
-    const [cmd, ...args] = tokenize(line);
-    if(!cmd) return;
-    if(commands[cmd]) commands[cmd](args);
-    else writeLine(`Command not found: ${cmd}. Try 'help'.`);
-  };
-
-  const tokenize = (str) => {
-    // naive tokenizer supporting quotes
-    const out = [];
-    let buf = "", quote = null;
-    for(let i=0;i<str.length;i++){
-      const c = str[i];
-      if(quote){
-        if(c===quote){ quote=null; }
-        else buf += c;
-      }else{
-        if(c==='"' || c==="'" ){ quote=c; }
-        else if(/\s/.test(c)){ if(buf){ out.push(buf); buf=""; } }
-        else buf += c;
+  function moveObstacles() {
+    obstacles.forEach((obs, i) => {
+      let top = parseInt(obs.style.top);
+      top += 5;
+      obs.style.top = top + 'px';
+      if(top >= 80 && Math.abs(parseInt(obs.style.left) - playerPos) < 20) {
+        gameOver = true;
       }
-    }
-    if(buf) out.push(buf);
-    return out;
-  };
-
-  // Autocomplete
-  const completions = Object.keys(commands);
-  const complete = (frag) => {
-    const hits = completions.filter(c => c.startsWith(frag));
-    if(hits.length===1) return hits[0];
-    if(hits.length>1){
-      writeLine(hits.join('  '));
-    }
-    return null;
-  };
-
-  // Key events at document level to keep focus easy
-  document.addEventListener('keydown', (ev)=>{
-    const active = term.querySelector('.inputline:last-of-type');
-    if(!active) return;
-
-    if(ev.key === 'Backspace'){
-      ev.preventDefault();
-      currentInput = currentInput.slice(0,-1);
-      active.textContent = currentInput;
-      return;
-    }
-    if(ev.key === 'Enter'){
-      ev.preventDefault();
-      // finalize input, print newline
-      const promptText = active.previousSibling.textContent;
-      active.nextSibling.remove(); // remove caret
-      active.outerHTML = active.outerHTML; // freeze
-      writeLine();
-      const line = currentInput.trim();
-      if(line){
-        commitHistory(line);
-        runCommand(line);
+      if(top > 100) {
+        obs.remove();
+        obstacles.splice(i, 1);
+        if(!gameOver) score++;
       }
-      currentInput = "";
-      promptLine();
-      return;
-    }
-    if(ev.key === 'Tab'){
-      ev.preventDefault();
-      const guess = complete(currentInput);
-      if(guess){ currentInput = guess; active.textContent = currentInput; }
-      return;
-    }
-    if(ev.key === 'ArrowUp'){
-      ev.preventDefault();
-      if(hIndex>0){ hIndex--; currentInput = history[hIndex] || ""; active.textContent = currentInput; }
-      return;
-    }
-    if(ev.key === 'ArrowDown'){
-      ev.preventDefault();
-      if(hIndex<history.length){ hIndex++; currentInput = history[hIndex] || ""; active.textContent = currentInput; }
-      return;
-    }
-    if(ev.key.length === 1){
-      currentInput += ev.key;
-      active.textContent = currentInput;
-      return;
-    }
-  }, {capture:true});
+    });
+  }
 
-  // Boot
-  const boot = async (fast=false) => {
-    await banner();
-    const motd = localStorage.getItem('mb_motd');
-    if(motd) writeLine(`MOTD: ${motd}`);
-    if(!fast){
-      await type(writeLine(), "Boot sequence: [ OK ] Display · [ OK ] Storage · [ OK ] Bonzi Subsystem\n", 2);
+  const gameLoop = setInterval(() => {
+    if(gameOver) {
+      clearInterval(gameLoop);
+      printLine("Game Over! Score: " + score);
+      return;
     }
-    promptLine();
-  };
+    if(Math.random() < 0.1) createObstacle();
+    moveObstacles();
+  }, 100);
 
-  // Start
-  boot();
+  document.addEventListener('keydown', e => {
+    if(e.key === 'ArrowLeft') playerPos = Math.max(0, playerPos - 20);
+    if(e.key === 'ArrowRight') playerPos = Math.min(180, playerPos + 20);
+    player.style.left = playerPos + 'px';
+  });
 
-})();
+  return '';
+}
+
+// ---- Welcome message ----
+printLine("Welcome to Michaelsoft Binbows Bonzi Edition!");
+printLine("Type 'help' for commands.");
 </script>
 </body>
 </html>
